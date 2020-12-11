@@ -5,8 +5,10 @@
 #include "segment.h"
 #include "nonvolatile.h"
 
-#define DATA_PIN 11 // pixel strip data pin
-#define NUM_LEDS 150
+#define DATA_PIN 10 // pixel strip data pin
+//#define NUM_LEDS 150
+#define NUM_LEDS 8
+//#define SERIALDEBUG
 
 uint8_t program_num=0;
 uint8_t exec_prog=0;
@@ -26,10 +28,19 @@ void setup()
 	segment.begin();
 
   program_num=nv.getProgramNum();
+#ifdef SERIALDEBUG
+  Serial.begin(9600);
+  Serial.println("Initialized Serial");
+#endif
 }
 
 void loop()
 {
+#ifdef SERIALDEBUG
+  Serial.print ("Top of loop\t");
+  Serial.print (program_num);
+  Serial.println ();
+#endif
   program_num=program_num%12;
   if (program_num == 10) {
     exec_prog=(exec_prog%9)+1;
@@ -42,6 +53,11 @@ void loop()
     repeat=true;
   }
 
+#ifdef SERIALDEBUG
+  Serial.print("exec_prog:\t");
+  Serial.print(exec_prog);
+  Serial.println ();
+#endif
   switch (exec_prog) {
     case 0 :
       nothing();
