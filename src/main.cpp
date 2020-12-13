@@ -6,8 +6,8 @@
 #include "nonvolatile.h"
 
 #define DATA_PIN 10 // pixel strip data pin
-//#define NUM_LEDS 150
-#define NUM_LEDS 8
+#define NUM_LEDS 150
+//#define NUM_LEDS 8
 //#define SERIALDEBUG
 
 uint8_t program_num=0;
@@ -27,10 +27,24 @@ void setup()
 
 	segment.begin();
 
-  program_num=nv.getProgramNum();
+  //program_num=nv.getProgramNum();
+  program_num=2;
 #ifdef SERIALDEBUG
   Serial.begin(9600);
   Serial.println("Initialized Serial");
+  Serial.print("MCUSR: ");
+  Serial.println(MCUSR);
+   switch (MCUSR) {
+   case 2: // b00000010
+           // Reset button or otherwise some software reset
+           Serial.println("Reset button was pressed.");
+           break;
+   case 7: // b00000111
+           // Boot up after power loss
+           Serial.println("Power loss occured!");
+           break;
+   }
+
 #endif
 }
 
@@ -63,12 +77,21 @@ void loop()
       nothing();
       break;
     case 1 :
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Red");
+#endif
       colorWipe(CRGB::Red, 50);   // Red
       break;
     case 2 :
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Green");
+#endif
       colorWipe(CRGB::Green, 50); // Green
       break;
     case 3 :
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Blue");
+#endif
       colorWipe(CRGB::Blue, 50);  // Blue
       break;
     case 4 :
@@ -110,8 +133,8 @@ void colorWipe(uint32_t c, uint8_t wait)
   while (repeat) {
     uint16_t i=0;
     while ((repeat) && (i < NUM_LEDS)) {
-      i++;
       strip[i] = c;
+      i++;
       FastLED.show();
       unsigned long now=millis();
       unsigned long delaytime=now + wait;
