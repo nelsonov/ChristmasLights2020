@@ -8,7 +8,7 @@
 
 #define BUTTON_PIN 2
 #define BOUNCE_INTERVAL 25
-#define POT_PIN A0
+#define ANALOG_RESOLUTION 1023 // 0-1023 = 10 bits on 328p
 #define DATA_PIN 10 // pixel strip data pin
 #define NUM_LEDS 8
 #define RANDOM 10
@@ -18,15 +18,19 @@
 #define RANDOM_LETTER "A"
 #define CYCLE_LETTER "C"
 #define CYCLE_HOLD 10000  // miliseconds
+#define MAXBRIGHT 128
 //#define NUM_LEDS 8
 //#define SERIALDEBUG
 
+int analog_pin = A0;
 uint8_t program_num=0;
 uint8_t exec_prog=0;
 NonVolatile nv;
 Segment segment;
 Bounce button = Bounce(); // Instantiate a Bounce object
 bool repeat = false;
+uint8_t bright;
+uint16_t analog;
 
 CRGB strip[NUM_LEDS];
 
@@ -59,11 +63,10 @@ void setup()
            Serial.println("Power loss occured!");
            break;
    }
-
 #endif
 }
 
-void buttonPress() 
+void readInput() 
 {
   button.update();
   if (button.fell()) {
@@ -72,6 +75,13 @@ void buttonPress()
 #endif
     repeat=false;
     program_num++;
+  }
+  uint16_t this_analog=analogRead(analog_pin);
+  if (this_analog != analog) {
+    analog=this_analog;
+    int bright=map(analog, 0, ANALOG_RESOLUTION, 0, MAXBRIGHT);
+    FastLED.setBrightness(bright);
+   FastLED.show();
   }
 }
 
@@ -107,7 +117,7 @@ void loop()
     exec_prog=program_num;
     repeat=true;
   }
-
+  nv.setProgramNum(program_num);  // store current program in nvram (eeprom)
 #ifdef SERIALDEBUG
   Serial.print("exec_prog:\t\t");
   Serial.print(exec_prog);
@@ -191,7 +201,7 @@ void nothing()
   }
   //Wait for button press
   while (repeat) {
-    buttonPress();
+    readInput();
   }
 }
 
@@ -208,7 +218,7 @@ void colorWipe(uint32_t c, uint8_t wait, uint32_t hold)
 #endif
   unsigned long now;
   unsigned long delaytime;
-  buttonPress();
+  readInput();
   uint16_t i = 0;
   while ((repeat) && (i < NUM_LEDS))
   {
@@ -220,7 +230,7 @@ void colorWipe(uint32_t c, uint8_t wait, uint32_t hold)
     while ((repeat) && (now < delaytime))
     {
       now = millis();
-      buttonPress();
+      readInput();
     }
   }
   if (hold > 0)
@@ -237,11 +247,11 @@ void colorWipe(uint32_t c, uint8_t wait, uint32_t hold)
     while ((repeat) && (now < delaytime))
     {
       now = millis();
-      buttonPress();
+      readInput();
     }
   } else {
     while (repeat) {
-      buttonPress();
+      readInput();
     }
   }
 }
