@@ -4,17 +4,29 @@
 #include "main.h"
 #include "segment.h"
 #include "nonvolatile.h"
+#include <Bounce2.h>
 
+#define BUTTON_PIN 2
+#define BOUNCE_INTERVAL 25
+#define POT_PIN A0
 #define DATA_PIN 10 // pixel strip data pin
-#define NUM_LEDS 150
+#define NUM_LEDS 8
+#define RANDOM 10
+#define CYCLE 11
+#define TOTAL_PROGS 12
+#define LAST_EXEC 9
+#define RANDOM_LETTER "A"
+#define CYCLE_LETTER "C"
+#define CYCLE_HOLD 10000  // miliseconds
 //#define NUM_LEDS 8
 //#define SERIALDEBUG
 
 uint8_t program_num=0;
 uint8_t exec_prog=0;
-bool repeat=true;
 NonVolatile nv;
 Segment segment;
+Bounce button = Bounce(); // Instantiate a Bounce object
+bool repeat = false;
 
 CRGB strip[NUM_LEDS];
 
@@ -29,7 +41,10 @@ void setup()
 
   //program_num=nv.getProgramNum();
   program_num=2;
-#ifdef SERIALDEBUG
+
+  button.attach (BUTTON_PIN, INPUT_PULLUP);
+  button.interval(BOUNCE_INTERVAL);
+  #ifdef SERIALDEBUG
   Serial.begin(9600);
   Serial.println("Initialized Serial");
   Serial.print("MCUSR: ");
@@ -48,27 +63,53 @@ void setup()
 #endif
 }
 
+void buttonPress() 
+{
+  button.update();
+  if (button.fell()) {
+#ifdef SERIALDEBUG
+  Serial.println ("Button Press Detected");
+#endif
+    repeat=false;
+    program_num++;
+  }
+}
+
 void loop()
 {
+  int hold_time=0;
 #ifdef SERIALDEBUG
-  Serial.print ("Top of loop\t");
+  Serial.print ("Top of loop\t\t");
   Serial.print (program_num);
   Serial.println ();
 #endif
-  program_num=program_num%12;
-  if (program_num == 10) {
-    exec_prog=(exec_prog%9)+1;
-    repeat=false;
-  } else if (program_num == 11) {
-    exec_prog=rand() % 9 + 1;
-    repeat=false;
+  program_num=program_num%TOTAL_PROGS;
+  #ifdef SERIALDEBUG
+  Serial.print ("Normalized program_num\t");
+  Serial.print (program_num);
+  Serial.println ();
+#endif
+  if (program_num == RANDOM) {
+#ifdef SERIALDEBUG
+  Serial.println ("Cycle");
+#endif
+    exec_prog=(exec_prog%LAST_EXEC)+1;
+    hold_time=CYCLE_HOLD;
+    repeat=true;
+  } else if (program_num == CYCLE) {
+#ifdef SERIALDEBUG
+  Serial.println ("Random");
+#endif
+    exec_prog=rand() % LAST_EXEC + 1;
+    hold_time=CYCLE_HOLD;
+    repeat=true;
   } else {
     exec_prog=program_num;
     repeat=true;
   }
 
 #ifdef SERIALDEBUG
-  Serial.print("exec_prog:\t");
+  Serial.print("exec_prog:\t\t");
   Serial.print(exec_prog);
   Serial.println ();
 #endif
@@ -80,37 +121,62 @@ void loop()
 #ifdef SERIALDEBUG
       Serial.println("Color Wipe Red");
 #endif
-      colorWipe(CRGB::Red, 50);   // Red
+      colorWipe(CRGB::Red, 50, hold_time);   // Red
       break;
     case 2 :
 #ifdef SERIALDEBUG
       Serial.println("Color Wipe Green");
 #endif
-      colorWipe(CRGB::Green, 50); // Green
-      break;
+      colorWipe(CRGB::Green, 50, hold_time); // Green
+      break
+      ;
     case 3 :
 #ifdef SERIALDEBUG
       Serial.println("Color Wipe Blue");
 #endif
-      colorWipe(CRGB::Blue, 50);  // Blue
+      colorWipe(CRGB::Blue, 50, hold_time);  // Blue
       break;
     case 4 :
-      theaterChase(CRGB::White, 50); // White
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Gray");
+#endif
+      colorWipe(CRGB::Gray, 50, hold_time);
+//      theaterChase(CRGB::White, 50); // White
       break;
     case 5 :
-      theaterChase(CRGB::Red, 50);   // Red
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Yellow");
+#endif
+      colorWipe(CRGB::Yellow, 50, hold_time);
+//      theaterChase(CRGB::Red, 50);   // Red
       break;
     case 6 :
-      theaterChase(CRGB::Blue, 50);  // Blue
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Orange");
+#endif
+      colorWipe(CRGB::Orange, 50, hold_time);
+//      theaterChase(CRGB::Blue, 50);  // Blue
       break;
     case 7 : 
-      rainbow(20);
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Aqua");
+#endif
+      colorWipe(CRGB::Aqua, 50, hold_time);
+//      rainbow(20);
       break;
     case 8 : 
-      rainbowCycle(20);
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Purple");
+#endif
+      colorWipe(CRGB::Purple, 50, hold_time);
+//      rainbowCycle(20);
       break;
     case 9 :
-      theaterChaseRainbow(50);
+#ifdef SERIALDEBUG
+      Serial.println("Color Wipe Pink");
+#endif
+      colorWipe(CRGB::Pink, 50, hold_time);
+//      theaterChaseRainbow(50);
       break;
   }
 }
@@ -123,25 +189,60 @@ void nothing()
     strip[i] = CRGB::Black;
     FastLED.show();
   }
-  //Wait for intterupt
-  while (repeat) {}
+  //Wait for button press
+  while (repeat) {
+    buttonPress();
+  }
 }
 
-
-void colorWipe(uint32_t c, uint8_t wait)
+void colorWipe(uint32_t c, uint8_t wait, uint32_t hold)
 {
-  while (repeat) {
-    uint16_t i=0;
-    while ((repeat) && (i < NUM_LEDS)) {
-      strip[i] = c;
-      i++;
-      FastLED.show();
-      unsigned long now=millis();
-      unsigned long delaytime=now + wait;
-      while ((repeat) && (now < delaytime)) {
-        now=millis();
-     }
-   }
+#ifdef SERIALDEBUG
+  Serial.print("Top of colorWipe. c ");
+  Serial.print(c);
+  Serial.print(" wait: ");
+  Serial.print(wait);
+  Serial.print(" hold: ");
+  Serial.print(hold);
+  Serial.println();
+#endif
+  unsigned long now;
+  unsigned long delaytime;
+  buttonPress();
+  uint16_t i = 0;
+  while ((repeat) && (i < NUM_LEDS))
+  {
+    strip[i] = c;
+    i++;
+    FastLED.show();
+    now = millis();
+    delaytime = now + wait;
+    while ((repeat) && (now < delaytime))
+    {
+      now = millis();
+      buttonPress();
+    }
+  }
+  if (hold > 0)
+  {
+    now = millis();
+    delaytime = now + hold;
+#ifdef SERIALDEBUG
+    Serial.print("Holding for ");
+    Serial.print(hold);
+    Serial.print(" milliseconds. repeat: ");
+    Serial.print(repeat);
+    Serial.println();
+#endif
+    while ((repeat) && (now < delaytime))
+    {
+      now = millis();
+      buttonPress();
+    }
+  } else {
+    while (repeat) {
+      buttonPress();
+    }
   }
 }
 
