@@ -1,38 +1,7 @@
 #include <stdint.h>
 #include <Arduino.h>
-#include <FastLED.h>
+#include "defaults.h"
 #include "main.h"
-#include "segment.h"
-#include "nonvolatile.h"
-#include <Bounce2.h>
-
-#define BUTTON_PIN 2
-#define BOUNCE_INTERVAL 25
-#define ANALOG_RESOLUTION 1023 // 0-1023 = 10 bits on 328p
-#define DATA_PIN 10 // pixel strip data pin
-#define NUM_LEDS 8
-#define RANDOM 10
-#define CYCLE 11
-#define TOTAL_PROGS 12
-#define LAST_EXEC 9
-#define RANDOM_LETTER "A"
-#define CYCLE_LETTER "C"
-#define CYCLE_HOLD 10000  // miliseconds
-#define MAXBRIGHT 128
-//#define NUM_LEDS 8
-//#define SERIALDEBUG
-
-int analog_pin = A0;
-uint8_t program_num=0;
-uint8_t exec_prog=0;
-NonVolatile nv;
-Segment segment;
-Bounce button = Bounce(); // Instantiate a Bounce object
-bool repeat = false;
-uint8_t bright;
-uint16_t analog;
-
-CRGB strip[NUM_LEDS];
 
 void setup()
 {
@@ -41,10 +10,10 @@ void setup()
   //fill_solid( &(strip[0]), NUM_LEDS /number of leds/, CRGB::Black ); // set them all to off
   //FastLED.show(); // then display the strip
 
-	segment.begin();
+  program_num=nv.getProgramNum();
+  segment.begin();
+  segment.display(program_num);
 
-  //program_num=nv.getProgramNum();
-  program_num=2;
 
   button.attach (BUTTON_PIN, INPUT_PULLUP);
   button.interval(BOUNCE_INTERVAL);
@@ -118,6 +87,8 @@ void loop()
     repeat=true;
   }
   nv.setProgramNum(program_num);  // store current program in nvram (eeprom)
+//  segment.display(program_num);
+
 #ifdef SERIALDEBUG
   Serial.print("exec_prog:\t\t");
   Serial.print(exec_prog);
