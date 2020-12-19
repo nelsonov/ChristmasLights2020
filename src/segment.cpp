@@ -20,7 +20,7 @@ void Segment::display(int program_num)
         this->display_char(67);
     } else if (program_num == 11) {
         this->display_char(65);
-    } else if ((program_num > 0) && (program_num < 10)) {
+    } else if ((program_num >= 0) && (program_num < 10)) {
         this->display_int(program_num);
     } else {
         this->display_char(69);

@@ -1,3 +1,5 @@
+#ifndef SEGMENT_H
+#define SEGMENT_H
 #include <SevSeg.h>
 
 #define SEG_A 8 //LED pin 7
@@ -25,4 +27,4 @@ class Segment {
         void blank(void);
         Segment();
 };
-
+#endif

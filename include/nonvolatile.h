@@ -1,3 +1,5 @@
+#ifndef NONVOLATILE_H
+#define NONVOLATILE_H
 #include <EEPROM.h>
 #define EEPROM_ADDR 0
 
@@ -8,3 +10,4 @@ class NonVolatile
         void setProgramNum(uint8_t program_num);
         NonVolatile();
 };
+#endif
